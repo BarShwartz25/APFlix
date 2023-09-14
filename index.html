@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Movie Recommender</title>
+    <!-- Styling for the client UI -->
+    <style>
+        h1 {
+            color: #FFFFFF;
+            font-family: system-ui;
+            margin-left: 20px;
+        }
+
+        body {
+            background-color: #222629;
+        }
+
+        label {
+            color: #86C232;
+            font-family: system-ui;
+            font-size: 20px;
+            margin-left: 20px;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #86C232;
+            border-color: #86C232;
+            color: #FFFFFF;
+            font-family: system-ui;
+            font-size: 20px;
+            font-weight: bold;
+            margin-left: 30px;
+            margin-top: 20px;
+            width: 140px;
+        }
+
+        input {
+            color: #222629;
+            font-family: system-ui;
+            font-size: 15px;
+            margin-left: 10px;
+            margin-top: 20px;
+            height: 50 px;
+            width: 500 px;
+        }
+    </style>
+    <script>
+        const EMAIL_COMPREHEND = "EMAIL"
+        const PIN_COMPREHENED = "PIN"
+        const AGE_COMPREHEND = "AGE"
+
+        // callAPI function that sends the user prompt
+        var callAPI = async (user_prompt, user_engine) => {
+            document.getElementById(EMAIL_COMPREHEND + "_label").style.color = "#86C232";
+            document.getElementById(PIN_COMPREHENED + "_label").style.color = "#86C232";
+            document.getElementById(AGE_COMPREHEND + "_label").style.color = "#86C232";
+            document.getElementById("llm_answer").value = " ";
+            // instantiate a headers object
+            var headers = new Headers();
+
+            // add content type header to object
+            headers.append("Content-Type", "application/json");
+
+            // using built in JSON utility package turn object to string and store in a variable
+            let myCheckboxes = []
+
+            if (document.getElementById(EMAIL_COMPREHEND).checked == true) {
+                myCheckboxes.push(EMAIL_COMPREHEND)
+            }
+
+            if (document.getElementById(PIN_COMPREHENED).checked == true) {
+                myCheckboxes.push(PIN_COMPREHENED)
+            }
+
+            if (document.getElementById(AGE_COMPREHEND).checked == true) {
+                myCheckboxes.push(AGE_COMPREHEND)
+            }
+
+            const score = document.getElementById("score_limit").value;
+
+            let comprehendRaw = JSON.stringify({
+                "user_input": user_prompt,
+                "user_checks": myCheckboxes,
+                "score_limit": score
+            });
+
+            console.log(comprehendRaw);
+
+            // create a JSON object with parameters for API call and store in a variable
+            var comprehendRequestOptions = {
+                method: 'POST',
+                headers: headers,
+                body: comprehendRaw,
+                redirect: 'follow'
+            };
+
+            // make API call with parameters and use promises to get response
+            let Comprehendresponse = await fetch("https://06sdq968x1.execute-api.us-east-1.amazonaws.com/dev",
+                comprehendRequestOptions)
+
+            //console.log(Comprehendresponse.json())
+            let comprehendResponseJSON = await Comprehendresponse.json()
+
+            console.log(comprehendResponseJSON.body)
+            if (comprehendResponseJSON.body && comprehendResponseJSON.body.length !== 0) {
+                for (element in comprehendResponseJSON.body) {
+                    console.log(comprehendResponseJSON.body[element])
+                    document.getElementById(comprehendResponseJSON.body[element] + "_label").style.color = "red";
+                }
+            } else {
+                let openAIRaw = JSON.stringify({ "user_input": user_prompt, "user_engine": user_engine });
+
+                // create a JSON object with parameters for API call and store in a variable
+                var openAIRequestOptions = {
+                    method: 'POST',
+                    headers: headers,
+                    body: openAIRaw,
+                    redirect: 'follow'
+                };
+
+                // make API call with parameters and use promises to get response
+                fetch("https://td3ra07q92.execute-api.us-east-1.amazonaws.com/dev", openAIRequestOptions)
+                    .then(response => response.text())
+                    .then(result => document.getElementById("llm_answer").value = (JSON.parse(result).body))
+                    .catch(error => console.log('error', error));
+            }
+        }
+
+    </script>
+</head>
+
+<body>
+    <h1>Movie Recommender</h1>
+    <form>
+        <label>Tell me somthing about yorself:</label>
+        <input type="text" id="user_prompt">
+        <label>Choose model:</label>
+        <select type="text" id="user_engine" name="user_engine">
+            <option value="text-davinci-003"> text-davinci-003</option>
+            <option value="text-davinci-002"> text-davinci-002</option>
+        </select>
+    </form>
+    <form>
+        <label for="myCheckbox">Mark the details you don't want to revael:</label>
+    </form>
+    <form>
+        <label for="myCheckbox" id="EMAIL_label">Email Adress:</label>
+        <input type="checkbox" id="EMAIL" name="myCheckbox">
+        <label for="myCheckbox" id="PIN_label">PIN code:</label>
+        <input type="checkbox" id="PIN" name="myCheckbox">
+        <label for="myCheckbox" id="AGE_label">Age:</label>
+        <input type="checkbox" id="AGE" name="myCheckbox">
+        <label>Score over limit:</label>
+        <input type="number" id="score_limit" value=0 min=0 max=99>
+    </form>
+    <form>
+        <!-- set button onClick method to call function we defined passing input values as parameters -->
+        <button type="button"
+            onclick="callAPI(document.getElementById('user_prompt').value , document.getElementById('user_engine').value )">Search
+            for
+            movie</button>
+    </form>
+    <form>
+        <label>The movie i choose:</label>
+        <input type="text" id="llm_answer">
+    </form>
+</body>
+
+</html>
